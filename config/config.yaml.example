@@ -1,0 +1,13 @@
+# iTunes音楽ライブラリ設定
+itunes:
+  # iTunes Media Musicディレクトリのパス
+  media_path: G:/iTunes/iTunes Media/Music
+  # iTunes Search API の国コード (jp, us, uk など)
+  api_country: jp
+
+# アートワーク設定
+artwork:
+  # アートワークファイルの出力ディレクトリ
+  output_dir: tmp/artwork
+  # アートワークの品質 (small, medium, large, original)
+  quality: medium

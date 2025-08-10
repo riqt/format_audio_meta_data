@@ -108,7 +108,7 @@ class iTunesArtworkFetcher:
         # 出力ディレクトリを作成
         Path(output_dir).mkdir(exist_ok=True)
         
-        for i, result in enumerate(results[:5]):  # 上位5件
+        for i, result in enumerate(results[:1]):  # 最初の1件のみ
             artist = result.get('artistName', 'Unknown')
             album = result.get('collectionName', 'Unknown')
             
