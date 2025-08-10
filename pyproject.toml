@@ -1,0 +1,11 @@
+[project]
+name = "format-audio-meta-data"
+version = "0.1.0"
+description = "iTunes楽曲情報自動補完スクリプト"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "mutagen>=1.47.0",
+    "pyyaml>=6.0.2",
+    "requests>=2.32.4",
+]
