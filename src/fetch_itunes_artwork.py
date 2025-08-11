@@ -1,6 +1,6 @@
 import requests
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 class iTunesArtworkFetcher:
     """iTunes Search APIを使用してアートワークを取得するクラス"""
@@ -89,7 +89,7 @@ class iTunesArtworkFetcher:
             return False
     
     def search_and_download(self, query: str, output_dir: str = "artwork", 
-                          quality: str = "large", country: str = "jp"):
+                          quality: str = "large", country: str = "jp", target_artist: str = None, target_album: str = None):
         """
         検索してアートワークをダウンロード
         
@@ -98,6 +98,8 @@ class iTunesArtworkFetcher:
             output_dir: 出力ディレクトリ
             quality: 画質（small, medium, large, original）
             country: 国コード
+            target_artist: 対象アーティスト名（優先選択用）
+            target_album: 対象アルバム名（優先選択用）
         """
         results = self.search_music(query, country)
         
@@ -108,14 +110,17 @@ class iTunesArtworkFetcher:
         # 出力ディレクトリを作成
         Path(output_dir).mkdir(exist_ok=True)
         
-        for i, result in enumerate(results[:1]):  # 最初の1件のみ
-            artist = result.get('artistName', 'Unknown')
-            album = result.get('collectionName', 'Unknown')
+        # 最適な結果を選択
+        best_result = self._select_best_match(results, target_artist, target_album)
+        
+        if best_result:
+            artist = best_result.get('artistName', 'Unknown')
+            album = best_result.get('collectionName', 'Unknown')
             
-            print(f"\n{i+1}. {artist} - {album}")
+            print(f"\n選択された結果: {artist} - {album}")
             
             # アートワークURLを取得
-            artwork_urls = self.get_artwork_urls(result)
+            artwork_urls = self.get_artwork_urls(best_result)
             
             if quality in artwork_urls:
                 url = artwork_urls[quality]
@@ -131,6 +136,76 @@ class iTunesArtworkFetcher:
                         'album': album,
                         'artwork_url': url,
                         'filename': filename,
-                        'itunes_id': result.get('collectionId'),
-                        'release_date': result.get('releaseDate')
+                        'itunes_id': best_result.get('collectionId'),
+                        'release_date': best_result.get('releaseDate')
                     }
+    
+    def _select_best_match(self, results: List[Dict], target_artist: str = None, target_album: str = None) -> Optional[Dict]:
+        """
+        検索結果から最適なマッチを選択
+        
+        Args:
+            results: 検索結果のリスト
+            target_artist: 対象アーティスト名
+            target_album: 対象アルバム名
+        
+        Returns:
+            最適な検索結果
+        """
+        if not results:
+            return None
+        
+        # ターゲットが指定されていない場合は最初の結果を返す
+        if not target_artist and not target_album:
+            return results[0]
+        
+        # スコアリング用の関数
+        def calculate_score(result):
+            score = 0
+            result_artist = result.get('artistName', '').lower()
+            result_album = result.get('collectionName', '').lower()
+            
+            # アーティスト名の一致度をチェック
+            if target_artist:
+                target_artist_lower = target_artist.lower()
+                if target_artist_lower == result_artist:
+                    score += 100  # 完全一致
+                elif target_artist_lower in result_artist or result_artist in target_artist_lower:
+                    score += 50   # 部分一致
+                
+                # 単語レベルでの一致をチェック
+                target_words = set(target_artist_lower.split())
+                result_words = set(result_artist.split())
+                common_words = target_words.intersection(result_words)
+                score += len(common_words) * 10
+            
+            # アルバム名の一致度をチェック
+            if target_album:
+                target_album_lower = target_album.lower()
+                if target_album_lower == result_album:
+                    score += 100  # 完全一致
+                elif target_album_lower in result_album or result_album in target_album_lower:
+                    score += 50   # 部分一致
+                
+                # 単語レベルでの一致をチェック
+                target_words = set(target_album_lower.split())
+                result_words = set(result_album.split())
+                common_words = target_words.intersection(result_words)
+                score += len(common_words) * 10
+            
+            return score
+        
+        # 各結果にスコアを付けてソート
+        scored_results = [(result, calculate_score(result)) for result in results]
+        scored_results.sort(key=lambda x: x[1], reverse=True)
+        
+        # デバッグ情報を表示
+        if len(scored_results) > 1:
+            print(f"検索結果の優先順位:")
+            for i, (result, score) in enumerate(scored_results[:3], 1):
+                artist = result.get('artistName', 'Unknown')
+                album = result.get('collectionName', 'Unknown')
+                print(f"  {i}. {artist} - {album} (スコア: {score})")
+        
+        # 最高スコアの結果を返す
+        return scored_results[0][0]
