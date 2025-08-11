@@ -267,6 +267,19 @@ class AudioMetadataWriter:
         except Exception as e:
             print(f"FLACメタデータ更新エラー: {e}")
             return False
+    
+    def update_composer(self, audio_file_path: str, composer_info: str) -> bool:
+        """
+        音楽ファイルのcomposer情報を更新
+        
+        Args:
+            audio_file_path: 音楽ファイルのパス
+            composer_info: 作曲者情報
+        
+        Returns:
+            成功したかどうか
+        """
+        return self.update_metadata(audio_file_path, {'composer': composer_info})
 
 
 # 使用例
